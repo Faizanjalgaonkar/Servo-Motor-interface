@@ -1,0 +1,141 @@
+#include <AccelStepper.h>
+#include <Keypad.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+// Motor Pins
+#define X_STEP_PIN 3
+#define X_DIR_PIN 4
+#define Y1_STEP_PIN 5
+#define Y1_DIR_PIN 6
+#define Y2_STEP_PIN 7
+#define Y2_DIR_PIN 8
+#define Z_STEP_PIN 9
+#define Z_DIR_PIN 10
+
+// Keypad configuration
+const byte ROW_NUM    = 4; // four rows
+const byte COLUMN_NUM = 4; // four columns
+
+char keys[ROW_NUM][COLUMN_NUM] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+
+byte pin_rows[ROW_NUM] = {11, 12, 13, A0};
+byte pin_column[COLUMN_NUM] = {A1, A2, A3, A4};
+
+Keypad keypad = Keypad(makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COLUMN_NUM);
+
+// LCD Setup (using I2C)
+LiquidCrystal_I2C lcd(0x27, 20, 4);
+
+// Stepper Motors Setup
+AccelStepper stepperX(AccelStepper::DRIVER, X_STEP_PIN, X_DIR_PIN);
+AccelStepper stepperY1(AccelStepper::DRIVER, Y1_STEP_PIN, Y1_DIR_PIN);
+AccelStepper stepperY2(AccelStepper::DRIVER, Y2_STEP_PIN, Y2_DIR_PIN);
+AccelStepper stepperZ(AccelStepper::DRIVER, Z_STEP_PIN, Z_DIR_PIN);
+
+// Position variables
+long currentX = 0, currentY = 0, currentZ = 0;
+long targetX = 0, targetY = 0, targetZ = 0;
+
+// Function to get input from keypad
+String getKeypadInput() {
+  String input = "";
+  char key;
+  
+  while (1) {
+    key = keypad.getKey();
+    if (key != NO_KEY) {
+      input += key;
+      lcd.setCursor(input.length(), 1);
+      lcd.print(key);  // Show key on LCD
+
+      if (key == '#') {  // End input when # is pressed
+        break;
+      }
+    }
+  }
+  
+  return input;
+}
+
+void setup() {
+  // Initialize stepper motors
+  stepperX.setMaxSpeed(1000);
+  stepperX.setAcceleration(500);
+
+  stepperY1.setMaxSpeed(1000);
+  stepperY1.setAcceleration(500);
+
+  stepperY2.setMaxSpeed(1000);
+  stepperY2.setAcceleration(500);
+
+  stepperZ.setMaxSpeed(1000);
+  stepperZ.setAcceleration(500);
+
+  // Initialize LCD
+  lcd.begin(16, 2);
+  lcd.setBacklight(1);
+  lcd.print("CNC Machine");
+  delay(1000);
+  lcd.clear();
+}
+
+void loop() {
+  char key = keypad.getKey();
+
+  if (key) {
+    lcd.setCursor(0, 0);
+    lcd.print("Key: ");
+    lcd.print(key);
+
+    if (key == 'A') { // Move to target position
+      lcd.clear();
+      lcd.print("Enter X position:");
+      targetX = atoi(getKeypadInput().c_str());  // Convert input string to int
+
+      lcd.clear();
+      lcd.print("Enter Y position:");
+      targetY = atoi(getKeypadInput().c_str());  // Convert input string to int
+
+      lcd.clear();
+      lcd.print("Enter Z position:");
+      targetZ = atoi(getKeypadInput().c_str());  // Convert input string to int
+
+      // Start movement
+      moveToTarget(targetX, targetY, targetZ);
+    }
+
+    // Update positions on LCD
+    displayPositions();
+  }
+
+  // Update motor positions
+  stepperX.run();
+  stepperY1.run();
+  stepperY2.run();
+  stepperZ.run();
+}
+
+void moveToTarget(long x, long y, long z) {
+  stepperX.moveTo(x);
+  stepperY1.moveTo(y);
+  stepperY2.moveTo(y); // Keep Y1 and Y2 in sync
+  stepperZ.moveTo(z);
+}
+
+void displayPositions() {
+  lcd.setCursor(0, 1);
+  lcd.print("X:");
+  lcd.print(currentX);
+  lcd.setCursor(8, 1);
+  lcd.print("Y:");
+  lcd.print(currentY);
+  lcd.setCursor(0, 2);
+  lcd.print("Z:");
+  lcd.print(currentZ);
+}
