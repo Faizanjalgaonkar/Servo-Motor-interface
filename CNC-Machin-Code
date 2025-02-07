@@ -129,13 +129,15 @@ void moveToTarget(long x, long y, long z) {
 }
 
 void displayPositions() {
+  lcd.clear();
   lcd.setCursor(0, 1);
   lcd.print("X:");
-  lcd.print(currentX);
+  lcd.print(targetX );
   lcd.setCursor(8, 1);
   lcd.print("Y:");
-  lcd.print(currentY);
+  lcd.print(targetY);
   lcd.setCursor(0, 2);
   lcd.print("Z:");
-  lcd.print(currentZ);
+  lcd.print(targetZ);
 }
+
